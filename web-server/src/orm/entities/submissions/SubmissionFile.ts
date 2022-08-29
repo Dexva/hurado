@@ -1,26 +1,24 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToOne } from 'typeorm';
+import { BaseEntity, Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, OneToOne } from "typeorm";
 
-import { File } from '../files/File';
+import type { File, Submission } from 'orm/entities';
 
-import { Submission } from './Submission';
+@Entity('submission_files')
+export class SubmissionFile extends BaseEntity {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-// Files included in a submission.
-// Usually just one file, but can be multiple (e.g. output only tasks)
+  @ManyToOne('Submission', (submission: Submission) => submission.files)
+  @JoinColumn({ name: 'submission_id' })
+  submission: Promise<Submission>;
 
-@Entity('submissionFile')
-export class SubmissionFile {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @OneToOne('File')
+  @JoinColumn({ name: 'file_id' })
+  file: Promise<File>;
 
-  @ManyToOne(() => Submission) // many SubmissionFile for one Submission (for multiple files) - not sure about this tbh
-  submission: Submission;
+  constructor(file: File, submission: Submission) {
+    super();
 
-  @Column()
-  submissionId: number;
-
-  @OneToOne(() => File) // a File can only belong to one SubmissionFile and vice versa
-  file: File;
-
-  @Column()
-  fileId: number;
-}
+    this.file = Promise.resolve(file);
+    this.submission = Promise.resolve(submission);
+  }
+};

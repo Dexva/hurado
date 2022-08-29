@@ -1,44 +1,34 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne } from 'typeorm';
+import { BaseEntity, Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn, ManyToOne } from "typeorm";
 
-import { TestData } from '../tasks/TestData';
+import { Verdicts } from "orm/entities/enums";
+import type { TestData, Result } from 'orm/entities';
 
-import { Result } from './Result';
-import { Verdicts } from './types';
+@Entity('test_data_results')
+export class TestDataResult extends BaseEntity {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-@Entity('testDataResults')
-export class TestDataResult {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @OneToOne('Result')
+  @JoinColumn({ name: 'result_id' })
+  result: Promise<Result>;
 
-  @ManyToOne(() => Result)
-  result: Result;
+  @ManyToOne('TestData', (testdata: TestData) => testdata.results)
+  @JoinColumn({ name: 'test_data_id' })
+  testData: Promise<TestData>;
 
-  @Column()
-  resultId: number;
-
-  @ManyToOne(() => TestData)
-  testData: TestData;
-
-  @Column()
-  testDataId: number;
-
-  @Column({
-    type: 'enum',
-    enum: Verdicts,
-  })
+  @Column('enum', { enum: Verdicts })
   verdict: Verdicts;
 
-  @Column()
+  @Column({ name: 'running_time' })
   runningTime: number;
 
-  @Column()
+  @Column({ name: 'running_memory' })
   runningMemory: number;
 
   // Must satisfy 0 <= raw_score <= 1
-  @Column()
+  @Column({ name: 'raw_score' })
   rawScore: number;
 
-  @Column()
-  @CreateDateColumn()
+  @Column({ name: 'verdict_gotten_at' })
   verdictGottenAt: Date;
-}
+};

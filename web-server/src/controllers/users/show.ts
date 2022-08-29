@@ -1,32 +1,42 @@
 import { Request, Response, NextFunction } from 'express';
-import { AppDataSource } from 'orm/data-source';
-import { User } from 'orm/entities/users/User';
-import { UserError } from 'utils/Errors';
 
-export const show = async (req: Request, res: Response, next: NextFunction) => {
+import { UserRepository } from 'orm/repositories';
+
+const allDetails = async (req: Request, res: Response, next: NextFunction) => {
   const id = req.params.id;
+  const user = await UserRepository.findOne({
+    where: { id },
+    relations: {
+      tasks: true,
+      develops: true,
+      submissions: true,
+      contests: true,
+      participations: true,
+    },
+  });
 
-  const userRepository = AppDataSource.getRepository(User);
+  if (!user) {
+    res.status(404).end();
+  } else {
+    res.status(200).send(user);
+  }
+};
 
-  const err: UserError = {};
+const notAllDetails = async (req: Request, res: Response, next: NextFunction) => {
+  const id = req.params.id;
+  const user = await UserRepository.findOne({ where: { id } });
 
-  try {
-    const user = await userRepository.findOne({
-      where: { id: parseInt(id) },
-      select: ['id', 'username', 'email', 'isAdmin', 'country', 'createdAt', 'name', 'school'],
-    });
+  if (!user) {
+    res.status(404).end();
+  } else {
+    res.status(200).send(user);
+  }
+};
 
-    if (!user) {
-      err.status = 404;
-    }
-
-    if (Object.keys(err).length) {
-      return next(err);
-    } else {
-      res.customSuccess(200, 'User found', user);
-    }
-  } catch (e) {
-    err.status = 500;
-    return next(err);
+export const show = (showAllDetails: boolean) => {
+  if (showAllDetails) {
+    return allDetails;
+  } else {
+    return notAllDetails;
   }
 };

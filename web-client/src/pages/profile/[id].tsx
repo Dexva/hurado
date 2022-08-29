@@ -1,31 +1,32 @@
 import React from 'react';
 import { useRouter } from 'next/router';
 import { AxiosError } from 'axios';
-import { http, HttpResponse } from '../../utils/http';
-import { ServerAPI } from '../../types/openapi';
+
+import { ServerAPI } from 'types/openapi';
+import { HttpResponse, http } from '../../utils/http';
 
 const ViewPage = () => {
   const [user, setUser] = React.useState<ServerAPI['User'] | null>(null);
 
   const router = useRouter();
 
-  const getUser = async (id: number) => {
+  const getUser = async(id: number) => {
     try {
       const response = await http.get(`http://localhost:4000/v1/users/${id}`);
 
-      setUser(response.data.data);
+      setUser(response.data);
     } catch (e: unknown) {
       if ((e instanceof AxiosError) && e.response) {
         const err: HttpResponse<ServerAPI['UserError']> = e.response;
 
         if (err.status == 404) {
-          alert(`User not found`);
+          alert('User not found');
         }
 
         if (err.status == 500) {
           alert(`${err.status}: Internal server error`);
         }
-        
+
       } else {
         console.log(e);
 
@@ -68,7 +69,7 @@ const ViewPage = () => {
       <React.Fragment>
         User not found
       </React.Fragment>
-    )
+    );
   }
 };
 

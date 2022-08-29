@@ -1,49 +1,42 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, OneToOne } from 'typeorm';
+import { BaseEntity, Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn, CreateDateColumn } from "typeorm";
 
-import { Submission } from './Submission';
-import { Verdicts } from './types';
+import { Verdicts } from 'orm/entities/enums';
+import type { Submission } from 'orm/entities';
 
 @Entity('results')
-export class Result {
-  @PrimaryGeneratedColumn()
-  id: number;
+export class Result extends BaseEntity {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-  @OneToOne(() => Submission)
-  submission: Submission;
+  @OneToOne('Submission')
+  @JoinColumn({ name: 'submission_id' })
+  submission: Promise<Submission>;
 
-  @Column()
-  submissionId: number;
-
-  @Column({
-    type: 'enum',
-    enum: Verdicts,
-  })
+  @Column('enum', { enum: Verdicts })
   verdict: Verdicts;
 
-  @Column()
+  @Column({ name: 'running_time' })
   runningTime: number;
 
-  @Column()
+  @Column({ name: 'running_memory' })
   runningMemory: number;
 
   // from instructions: computed as sum of SubtaskResult scaled_scores divided by Task.score_max-- Must satisfy 0 <= raw_score <= 1
-  @Column()
+  @Column({ name: 'raw_score' })
   rawScore: number;
 
-  @Column()
+  @Column({ name: 'is_official' })
   isOfficial: boolean;
 
-  @Column()
+  @Column({ name: 'compile_time' })
   compileTime: number;
 
-  @Column()
+  @Column({ name: 'compile_memory' })
   compileMemory: number;
 
-  @Column()
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  @Column()
-  @CreateDateColumn()
+  @Column({ name: 'verdict_gotten_at' })
   verdictGottenAt: Date;
-}
+};

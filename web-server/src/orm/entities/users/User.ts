@@ -1,62 +1,56 @@
 import bcrypt from 'bcryptjs';
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
-import { UserError } from 'utils/Errors';
+import { BaseEntity, Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, OneToMany } from 'typeorm';
 
-import { Countries } from './types';
+import { AppDataSource } from 'orm/data-source';
+import type { Task, TaskDeveloper, Submission, Contest, Participation } from 'orm/entities';
+import { Countries } from 'orm/entities/enums';
 
 @Entity('users')
-export class User {
-  @PrimaryGeneratedColumn()
-  id: number;
+export class User extends BaseEntity {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-  @Column({
-    unique: true,
-  })
+  @Column({ unique: true })
   email: string;
 
-  @Column({
-    nullable: false,
-    unique: true,
-  })
+  @Column({ unique: true })
   username: string;
 
-  @Column()
-  hashedPassword: string;
+  @Column({ name: 'hashed_password' })
+  private hashedPassword: string;
 
-  @Column()
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
-  @Column({
-    default: false,
-  })
+  @Column({ name: 'is_admin', default: false })
   isAdmin: boolean;
 
-  @Column({
-    nullable: true,
-  })
-  school: string;
+  @Column({ nullable: true })
+  school: string | null;
 
-  @Column({
-    default: '',
-  })
-  name: string;
+  @Column({ nullable: true })
+  name: string | null;
 
-  @Column({
-    type: 'enum',
-    enum: Countries,
-    default: Countries.PH,
-  })
+  @Column('enum', { enum: Countries, default: Countries.PH })
   country: Countries;
 
-  setCountry(country: Countries) {
-    if (Object.values(Countries).includes(country)) {
-      this.country = country;
-    }
-  }
-  
+  @OneToMany('Task', (task: Task) => task.owner)
+  tasks: Promise<Task[]>;
+
+  @OneToMany('TaskDeveloper', (taskDeveloper: TaskDeveloper) => taskDeveloper.user)
+  develops: Promise<TaskDeveloper[]>;
+
+  @OneToMany('Submission', (submission: Submission) => submission.owner)
+  submissions: Promise<Submission[]>;
+
+  @OneToMany('Contest', (contest: Contest) => contest.owner)
+  contests: Promise<Contest[]>;
+
+  @OneToMany('Participation', (participation: Participation) => participation.user)
+  participations: Promise<Participation[]>;
+
   setPassword(password: string) {
-    this.hashedPassword = bcrypt.hashSync(password, 8);
+    this.hashedPassword = bcrypt.hashSync(password);
   }
 
   checkIfPasswordMatch(unencryptedPassword: string) {

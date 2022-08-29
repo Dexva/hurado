@@ -1,31 +1,22 @@
 import { Request, Response, NextFunction } from 'express';
 
-import { AppDataSource } from 'orm/data-source';
-import { Task } from 'orm/entities/tasks/Task';
-import { CustomError } from 'utils/response/custom-error/CustomError';
+import { TaskRepository } from 'orm/repositories';
 
-export const list = async (req: Request, res: Response, next: NextFunction) => {
-  const userId = req.jwtPayload;
-
-  const taskRepository = AppDataSource.getRepository(Task);
+export const listTasks = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    let tasks = await taskRepository.find({
-      select: ['id', 'title', 'slug', 'isPublicInArchive'],
+    const tasks = await TaskRepository.find({
+      select: ['id', 'title', 'slug', 'description', 'isPublicInArchive'],
+      where: { isPublicInArchive: true },
+      relations: {
+        testData: true,
+        subtasks: true,
+        developers: true,
+        attachments: true,
+      },
     });
 
-    if (!userId) {
-      const publicTasks: Task[] = [];
-      for (let i = 0; i < tasks.length; i++) {
-        if (tasks[i].isPublicInArchive) {
-          publicTasks.push(tasks[i]);
-        }
-      }
-      tasks = publicTasks;
-    }
-
-    res.customSuccess(200, 'Tasks sent successfully', tasks);
-  } catch (err) {
-    const customError = new CustomError(400, 'Raw', 'Error', null, err);
-    return next(customError);
+    res.status(200).send(tasks);
+  } catch (e) {
+    res.status(500).end();
   }
 };

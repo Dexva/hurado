@@ -1,19 +1,57 @@
+import React from 'react';
 import { AppProps } from 'next/app';
-
+import { useRouter } from 'next/router';
 import { Provider } from 'react-redux';
+import { MathJaxContext } from 'better-react-mathjax';
 
-import store from './redux/store';
+import { Main } from 'components/Main';
+import store from 'pages/redux/store';
 
-import { Main } from '../components/Main';
-import '../styles/main.css';
-import '../styles/prism-a11y-dark.css';
+import 'styles/main.css';
+import 'styles/fonts.css';
+import { NavBar } from 'components/NavBar';
+import { Body } from 'components/Body/Body';
 
-const App = ({ Component, pageProps }: AppProps) => (
-  <Provider store={store}>
-    <Main>
-      <Component {...pageProps} />
-    </Main>
-  </Provider>
-);
+const config = {
+  loader: { load: ["[tex]/html"] },
+  tex: {
+    packages: { "[+]": ["html"] },
+    inlineMath: [
+      ["$", "$"],
+      ["\\(", "\\)"]
+    ],
+    displayMath: [
+      ["$$", "$$"],
+      ["\\[", "\\]"]
+    ]
+  }
+};
+
+const App = ({ Component, pageProps }: AppProps) => {
+  const router = useRouter();
+
+  // TODO: Fix this later when other people start styling things.
+  let main: React.ReactNode;
+  if (router.pathname == '/tasks/edit/[id]' || router.pathname == '/playground') {
+    main = <Component {...pageProps}/>;
+  } else {
+    main = (
+      <Main>
+        <Component {...pageProps} />
+      </Main>
+    );
+  }
+
+  return (
+    <Provider store={store}>
+      <MathJaxContext config={config}>
+        <NavBar />
+        <Body>
+          {main}
+        </Body>
+      </MathJaxContext>
+    </Provider>
+  );
+};
 
 export default App;

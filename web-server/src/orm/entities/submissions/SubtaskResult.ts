@@ -1,44 +1,34 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne } from 'typeorm';
+import { BaseEntity, Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn, ManyToOne } from "typeorm";
 
-import { Subtask } from '../tasks/Subtask';
+import { Verdicts } from "orm/entities/enums";
+import type { Result, Subtask } from 'orm/entities';
 
-import { Result } from './Result';
-import { Verdicts } from './types';
+@Entity('subtask_results')
+export class SubtaskResult extends BaseEntity {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-@Entity('subtaskResults')
-export class SubtaskResult {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @OneToOne('Result')
+  @JoinColumn({ name: 'result_id' })
+  result: Promise<Result>;
 
-  @ManyToOne(() => Result)
-  result: Result;
+  @ManyToOne('Subtask', (subtask: Subtask) => subtask.results)
+  @JoinColumn({ name: 'subtask_id' })
+  subtask: Promise<Subtask>;
 
-  @Column()
-  resultId: number;
-
-  @ManyToOne(() => Subtask)
-  subtask: Subtask;
-
-  @Column()
-  subtaskId: number;
-
-  @Column({
-    type: 'enum',
-    enum: Verdicts,
-  })
+  @Column('enum', { enum: Verdicts })
   verdict: Verdicts;
 
-  @Column()
+  @Column({ name: 'running_time' })
   runningTime: number;
 
-  @Column()
+  @Column({ name: 'running_memory' })
   runningMemory: number;
 
   // Must satisfy 0 <= raw_score <= 1
-  @Column()
+  @Column({ name: 'raw_score' })
   rawScore: number;
 
-  @Column()
-  @CreateDateColumn()
+  @Column({ name: 'verdict_gotten_at' })
   verdictGottenAt: Date;
-}
+};

@@ -1,13 +1,15 @@
 import React from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { AxiosError } from 'axios';
-import { set, UserState } from '../redux/userSlice';
-import { userStateLoader } from '../redux/store';
-import { ServerAPI } from '../../types/openapi';
-import { http, HttpResponse } from '../../utils/http';
+
+import { set } from 'pages/redux/userSlice';
+import { ReduxState } from 'pages/redux/store';
+import { userStateLoader } from 'pages/redux/userSlice';
+import { ServerAPI } from 'types/openapi';
+import { http, HttpResponse } from 'utils/http';
 
 const EditPage = () => {
-  const user = useSelector((state: UserState) => state.user);
+  const user = useSelector((state: ReduxState) => state.user);
 
   const [edited, setEdited] = React.useState(false);
 
@@ -41,7 +43,7 @@ const EditPage = () => {
         country
       });
 
-      dispatch(set(response.data.data));
+      dispatch(set(response.data));
       setEdited(true);
 
       alert('Profile has been edited');
@@ -84,7 +86,7 @@ const EditPage = () => {
 
   React.useEffect(() => {
     if (edited) {
-      userStateLoader.saveState({ user });
+      userStateLoader.saveState(user);
     }
   }, [edited])
 

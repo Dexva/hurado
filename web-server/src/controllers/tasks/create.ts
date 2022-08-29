@@ -1,146 +1,176 @@
 import { Request, Response, NextFunction } from 'express';
 
 import { AppDataSource } from 'orm/data-source';
-import { Script } from 'orm/entities/scripts/Script';
-import { Task } from 'orm/entities/tasks/Task';
-import { AllowedLanguages, Languages, TaskTypes } from 'orm/entities/tasks/types';
-import { User } from 'orm/entities/users/User';
-import { CustomError } from 'utils/response/custom-error/CustomError';
-import { ErrorArray } from 'utils/response/custom-error/errorTypes';
+import {
+  File,
+  Script,
+  Subtask,
+  TaskAttachment,
+  TestData,
+  Task,
+  TaskDeveloper,
+  createFile,
+  createScript,
+} from 'orm/entities';
+import { AllowedLanguages, TaskDeveloperRoles, TaskType } from 'orm/entities/enums';
+import { ServerAPI } from 'types';
+import { UserRepository } from 'orm/repositories';
 
-export const create = async (req: Request, res: Response, next: NextFunction) => {
-  const errors = new ErrorArray();
+export const createTask = async (req: Request, res: Response, next: NextFunction) => {
+  const rbody = req.body as ServerAPI['TaskPayload'];
+  const files: File[] = [];
+  const data: TestData[] = [];
+  const scripts: Script[] = [];
+  const subtasks: Subtask[] = [];
+  const developers: TaskDeveloper[] = [];
+  const attachments: TaskAttachment[] = [];
 
-  const id = req.jwtPayload.id;
-  const {
-    title,
-    slug,
-    description,
-    statement,
-    allowedLanguages,
-    taskType,
-    scoreMax,
-    checkerScriptId,
-    timeLimit,
-    memoryLimit,
-    compileTimeLimit,
-    compileMemoryLimit,
-    submissionSizeLimit,
-    validatorScriptId,
-    isPublicInArchive,
-    language,
-  } = req.body;
+  [rbody.checkerScript, rbody.validatorScript].forEach((s) => {
+    if (Object.keys(s).length) {
+      const file = createFile({
+        name: s.file.name,
+        contents: req.files[s.file.name][0].buffer,
+      });
+      files.push(file);
 
-  const taskRepository = AppDataSource.getRepository(Task);
-  const userRepository = AppDataSource.getRepository(User);
-  const scriptRepository = AppDataSource.getRepository(Script);
-
-  try {
-    let task = await taskRepository.findOne({ where: { slug } });
-
-    const user = await userRepository.findOne({ where: { id } });
-
-    if (task) {
-      errors.put('task', `Task wth id ${id} already exists`);
-    } else {
-      task = new Task();
-      task.owner = user;
-      task.ownerId = id;
-      task.title = title;
-      task.statement = statement;
-
-      try {
-        task.setSlug(slug);
-      } catch (err: unknown) {
-        if (err instanceof CustomError) {
-          errors.extend(err.JSON.errors);
-        } else {
-          const customError = new CustomError(400, 'Raw', 'Error', err, errors);
-          return next(customError);
-        }
-      }
-
-      if (description) {
-        task.description = description;
-      }
-
-      if (allowedLanguages) {
-        if (!Object.values(AllowedLanguages).includes(allowedLanguages)) {
-          errors.put('task', `${allowedLanguages} is invalid`);
-        } else {
-          task.allowedLanguages = allowedLanguages;
-        }
-      }
-      if (taskType) {
-        if (!Object.values(TaskTypes).includes(taskType)) {
-          errors.put('task', `${taskType} is invalid`);
-        } else {
-          task.taskType = taskType;
-        }
-      }
-
-      if (scoreMax) {
-        task.scoreMax = scoreMax;
-      }
-
-      if (checkerScriptId) {
-        const checker = await scriptRepository.findOne({ where: { id: checkerScriptId } });
-        task.checkerScript = checker;
-        task.checkerScriptId = checker.id;
-      }
-
-      if (timeLimit) {
-        task.timeLimit = timeLimit;
-      }
-
-      if (memoryLimit) {
-        task.memoryLimit = memoryLimit;
-      }
-
-      if (compileTimeLimit) {
-        task.compileTimeLimit = compileTimeLimit;
-      }
-
-      if (compileMemoryLimit) {
-        task.compileMemoryLimit = compileMemoryLimit;
-      }
-
-      if (submissionSizeLimit) {
-        task.submissionSizeLimit = submissionSizeLimit;
-      }
-
-      if (validatorScriptId) {
-        const validator = await scriptRepository.findOne({ where: { id: validatorScriptId } });
-        task.validatorScript = validator;
-        task.validatorScriptId = validator.id;
-      }
-
-      if (isPublicInArchive != null) {
-        if (isPublicInArchive && !user.isAdmin) {
-          errors.put('isPublicInArchive', 'Only administrators can access this setting');
-        } else {
-          task.isPublicInArchive = isPublicInArchive;
-        }
-      }
-
-      if (language) {
-        if (!Object.values(Languages).includes(language)) {
-          errors.put('language', `${language} is invalid`);
-        } else {
-          task.language = language;
-        }
-      }
+      const script = createScript({
+        file,
+        languageCode: s.languageCode,
+        runtimeArgs: s.runtimeArgs,
+      });
+      scripts.push(script);
     }
+  });
 
-    if (errors.isEmpty) {
-      await taskRepository.save(task);
-      res.customSuccess(200, 'Task succesfully created', task);
-    } else {
-      const customError = new CustomError(400, 'Validation', 'Task cannot be created', null, errors);
-      return next(customError);
-    }
-  } catch (err) {
-    const customError = new CustomError(400, 'Raw', 'Error', err, errors);
-    return next(customError);
+  const task = new Task();
+  task.owner = Promise.resolve(await UserRepository.findOne({ where: { id: req.jwtPayload.id } }));
+  task.title = rbody.title;
+  task.slug = rbody.slug;
+
+  if (rbody.description) {
+    task.description = rbody.description;
   }
+
+  task.statement = rbody.statement;
+  task.allowedLanguages = rbody.allowedLanguages as AllowedLanguages;
+  task.taskType = rbody.taskType as TaskType;
+  task.scoreMax = rbody.scoreMax;
+  task.checkerScript = Promise.resolve(scripts[0]);
+  task.timeLimit = rbody.timeLimit;
+  task.memoryLimit = rbody.memoryLimit;
+  task.compileTimeLimit = rbody.compileMemoryLimit;
+  task.compileMemoryLimit = rbody.compileMemoryLimit;
+  task.submissionSizeLimit = rbody.submissionSizeLimit;
+
+  if (scripts[1]) {
+    task.validatorScript = Promise.resolve(scripts[1]);
+  }
+
+  if (rbody.isPublicInArchive) {
+    task.isPublicInArchive = true;
+  }
+
+  rbody.data.forEach((d) => {
+    const inputFile = createFile({
+      name: d.inputFile.name,
+      contents: req.files[d.inputFile.name][0].buffer,
+    });
+    files.push(inputFile);
+
+    const outputFile = createFile({
+      name: d.outputFile.name,
+      contents: req.files[d.outputFile.name][0].buffer,
+    });
+    files.push(outputFile);
+
+    const testData = new TestData();
+    testData.task = Promise.resolve(task);
+    testData.order = d.order;
+    testData.name = d.name;
+    testData.inputFile = Promise.resolve(inputFile);
+    testData.outputFile = Promise.resolve(outputFile);
+
+    if (Object.keys(d.judgeFile).length) {
+      const judgeFile = createFile({
+        name: d.judgeFile.name,
+        contents: req.files[d.judgeFile.name][0].buffer,
+      });
+      files.push(judgeFile);
+
+      testData.judgeFile = Promise.resolve(judgeFile);
+    }
+
+    testData.isSample = d.isSample;
+    data.push(testData);
+  });
+
+  rbody.subtasks.forEach((s) => {
+    const scorerFile = createFile({
+      name: s.scorerScript.file.name,
+      contents: req.files[s.scorerScript.file.name][0].buffer,
+    });
+    files.push(scorerFile);
+
+    const scorerScript = createScript({
+      file: scorerFile,
+      languageCode: s.scorerScript.languageCode,
+      runtimeArgs: s.scorerScript.runtimeArgs,
+    });
+    scripts.push(scorerScript);
+
+    const validatorFile = createFile({
+      name: s.validatorScript.file.name,
+      contents: req.files[s.validatorScript.file.name][0].buffer,
+    });
+    files.push(validatorFile);
+
+    const validatorScript = createScript({
+      file: validatorFile,
+      languageCode: s.validatorScript.languageCode,
+      runtimeArgs: s.validatorScript.runtimeArgs,
+    });
+    scripts.push(validatorScript);
+
+    const subtask = new Subtask();
+    subtask.name = s.name;
+    subtask.task = Promise.resolve(task);
+    subtask.order = s.order;
+    subtask.scorerScript = Promise.resolve(scorerScript);
+    subtask.validatorScript = Promise.resolve(validatorScript);
+    subtask.testDataPattern = s.testDataPattern;
+    subtasks.push(subtask);
+  });
+
+  rbody.attachments.forEach((a) => {
+    const file = createFile({
+      name: a.file.name,
+      contents: req.files[a.file.name][0].buffer,
+    });
+    files.push(file);
+
+    const attachment = new TaskAttachment();
+    attachment.task = Promise.resolve(task);
+    attachment.file = Promise.resolve(file);
+    attachments.push(attachment);
+  });
+
+  for (const d of rbody.developers) {
+    const dev = new TaskDeveloper();
+    dev.task = Promise.resolve(task);
+    dev.user = Promise.resolve(await UserRepository.findOne({ where: { username: d.username } }));
+    dev.order = d.order;
+    dev.role = d.role as TaskDeveloperRoles;
+    developers.push(dev);
+  }
+
+  await AppDataSource.manager.transaction(async (transaction) => {
+    await transaction.save(files);
+    await transaction.save(data);
+    await transaction.save(scripts);
+    await transaction.save(subtasks);
+    await transaction.save(developers);
+    await transaction.save(attachments);
+  });
+
+  res.status(200).send(task);
 };
