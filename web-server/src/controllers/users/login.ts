@@ -12,6 +12,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     const jwtPayload: JwtPayload = { id: user.id, isAdmin: user.isAdmin };
     const token = createJwtToken(jwtPayload);
     res.status(200).send({ jwt: token, user });
+    console.log("res success");
   } catch (e) {
     res.status(500).end();
   }

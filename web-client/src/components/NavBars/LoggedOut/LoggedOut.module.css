@@ -1,17 +1,20 @@
 @media screen and (min-width: 600px) {
   .navbar {
     width: 100%;
-    height: fit-content; /* 80px */
+    height: fit-content; /* fit-content */
 
     background-color: white;
 
+    overflow: hidden;
     position: fixed;
     top: 0px;
+    z-index: 100;
 
     display: block;
     
     color: #003D5B;
     font-weight: 300;
+
   }  
 
   .navbar_reverse {
