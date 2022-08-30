@@ -1,0 +1,46 @@
+@media screen and (min-width: 600px) {
+
+    .top {
+        height: fit-content;
+    }
+
+    .logo {
+        color: white;
+        position: relative;
+        top: -100px;
+    }
+
+    .tarsier {
+        position: relative;
+        top: -650px;
+        left: 850px;
+    }
+
+    .wordstamp {
+        position: relative;
+        top: -500px;
+        left: 200px;
+    }
+
+    .title {
+        font-family: 'Montserrat';
+        font-size: 100px;
+        color: white;
+    }
+
+    .subtitle {
+        font-family: 'Montserrat';
+        font-size: 20px;
+        color: white;
+        font-weight: 100;
+        position: relative;
+        top: -30px;
+        left: 170px;
+    }
+
+    .noiph {
+        display: inline;
+    }
+
+
+}
